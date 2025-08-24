@@ -25,6 +25,7 @@ import {
 } from "react"
 import { toast } from "react-hot-toast"
 import { v4 as uuidv4 } from "uuid"
+import { useRef } from "react"
 import { useAppContext } from "./AppContext"
 import { useSocket } from "./SocketContext"
 
@@ -41,6 +42,9 @@ export const useFileSystem = (): FileContextType => {
 function FileContextProvider({ children }: { children: ReactNode }) {
     const { socket } = useSocket()
     const { setUsers, drawingData } = useAppContext()
+
+    // Debounce timer for persistence
+    const saveTimerRef = useRef<number | null>(null)
 
     const [fileStructure, setFileStructure] =
         useState<FileSystemItem>(initialFileStructure)
@@ -778,6 +782,25 @@ function FileContextProvider({ children }: { children: ReactNode }) {
         handleUserJoined,
         socket,
     ])
+
+    // Persist room state when structure or active file changes (debounced)
+    useEffect(() => {
+        if (saveTimerRef.current) {
+            window.clearTimeout(saveTimerRef.current)
+        }
+        saveTimerRef.current = window.setTimeout(() => {
+            socket.emit(SocketEvent.SAVE_ROOM_STATE, {
+                fileStructure,
+                openFiles,
+                activeFile,
+            })
+        }, 500)
+        return () => {
+            if (saveTimerRef.current) {
+                window.clearTimeout(saveTimerRef.current)
+            }
+        }
+    }, [socket, fileStructure, openFiles, activeFile])
 
     return (
         <FileContext.Provider

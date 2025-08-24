@@ -8,6 +8,7 @@ enum SocketEvent {
 	USER_JOINED = "user-joined",
 	USER_DISCONNECTED = "user-disconnected",
 	SYNC_FILE_STRUCTURE = "sync-file-structure",
+	SAVE_ROOM_STATE = "save-room-state",
 	DIRECTORY_CREATED = "directory-created",
 	DIRECTORY_UPDATED = "directory-updated",
 	DIRECTORY_RENAMED = "directory-renamed",

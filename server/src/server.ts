@@ -1,5 +1,6 @@
 import express, { Response, Request } from "express"
 import dotenv from "dotenv"
+import mongoose from "mongoose"
 import http from "http"
 import cors from "cors"
 import { SocketEvent, SocketId } from "./types/socket"
@@ -25,6 +26,27 @@ const io = new Server(server, {
 	maxHttpBufferSize: 1e8,
 	pingTimeout: 60000,
 })
+
+// MongoDB connection
+const mongoUri = process.env.MONGO_URI || "mongodb://localhost:27017/code_sync"
+mongoose
+	.connect(mongoUri)
+	.then(() => console.log("Connected to MongoDB"))
+	.catch((err) => console.error("MongoDB connection error:", err))
+
+// Room model (loose typing to avoid TS complexity)
+const RoomStateSchema = new mongoose.Schema(
+	{
+		roomId: { type: String, required: true, index: true, unique: true },
+		fileStructure: { type: Object, default: null },
+		openFiles: { type: Object, default: null },
+		activeFile: { type: Object, default: null },
+		drawingData: { type: Object, default: null },
+	},
+	{ timestamps: true }
+)
+
+const RoomState = mongoose.model("RoomState", RoomStateSchema)
 
 let userSocketMap: User[] = []
 
@@ -57,7 +79,23 @@ function getUserBySocketId(socketId: SocketId): User | null {
 
 io.on("connection", (socket) => {
 	// Handle user actions
-	socket.on(SocketEvent.JOIN_REQUEST, ({ roomId, username }) => {
+	socket.on(SocketEvent.JOIN_REQUEST, async ({ roomId, username }) => {
+		// Try to load and send any persisted state for this room to the joiner
+		try {
+			const state = await RoomState.findOne({ roomId }).lean()
+			if (state) {
+				io.to(socket.id).emit(SocketEvent.SYNC_FILE_STRUCTURE, {
+					fileStructure: state.fileStructure,
+					openFiles: state.openFiles,
+					activeFile: state.activeFile,
+				})
+				io.to(socket.id).emit(SocketEvent.SYNC_DRAWING, {
+					drawingData: state.drawingData,
+				})
+			}
+		} catch (err) {
+			console.error("Failed to load room state:", err)
+		}
 		// Check is username exist in the room
 		const isUsernameExist = getUsersInRoom(roomId).filter(
 			(u) => u.username === username
@@ -97,12 +135,42 @@ io.on("connection", (socket) => {
 	// Handle file actions
 	socket.on(
 		SocketEvent.SYNC_FILE_STRUCTURE,
-		({ fileStructure, openFiles, activeFile, socketId }) => {
+		async ({ fileStructure, openFiles, activeFile, socketId }) => {
+			const roomId = getRoomId(socket.id)
+			if (roomId) {
+				try {
+					await RoomState.findOneAndUpdate(
+						{ roomId },
+						{ $set: { fileStructure, openFiles, activeFile } },
+						{ upsert: true, new: true }
+					)
+				} catch (err) {
+					console.error("Failed to save file structure:", err)
+				}
+			}
 			io.to(socketId).emit(SocketEvent.SYNC_FILE_STRUCTURE, {
 				fileStructure,
 				openFiles,
 				activeFile,
 			})
+		}
+	)
+
+	// Save current room state explicitly (no forward)
+	socket.on(
+		SocketEvent.SAVE_ROOM_STATE as unknown as string,
+		async ({ fileStructure, openFiles, activeFile }) => {
+			const roomId = getRoomId(socket.id)
+			if (!roomId) return
+			try {
+				await RoomState.findOneAndUpdate(
+					{ roomId },
+					{ $set: { fileStructure, openFiles, activeFile } },
+					{ upsert: true, new: true }
+				)
+			} catch (err) {
+				console.error("Failed to save room state:", err)
+			}
 		}
 	)
 
@@ -245,10 +313,25 @@ io.on("connection", (socket) => {
 			.emit(SocketEvent.REQUEST_DRAWING, { socketId: socket.id })
 	})
 
-	socket.on(SocketEvent.SYNC_DRAWING, ({ drawingData, socketId }) => {
-		socket.broadcast
-			.to(socketId)
-			.emit(SocketEvent.SYNC_DRAWING, { drawingData })
+	socket.on(SocketEvent.SYNC_DRAWING, async ({ drawingData, socketId }) => {
+		const roomId = getRoomId(socket.id)
+		if (roomId) {
+			try {
+				await RoomState.findOneAndUpdate(
+					{ roomId },
+					{ $set: { drawingData } },
+					{ upsert: true, new: true }
+				)
+			} catch (err) {
+				console.error("Failed to save drawing data:", err)
+			}
+		}
+		// If a target socket is specified (e.g., on join), forward
+		if (socketId) {
+			socket.broadcast
+				.to(socketId)
+				.emit(SocketEvent.SYNC_DRAWING, { drawingData })
+		}
 	})
 
 	socket.on(SocketEvent.DRAWING_UPDATE, ({ snapshot }) => {
