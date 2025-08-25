@@ -16,6 +16,8 @@ import {
 import { toast } from "react-hot-toast"
 import { Socket, io } from "socket.io-client"
 import { useAppContext } from "./AppContext"
+import { useAuth } from "./AuthContext"
+import backendApi from "@/api/backendApi"
 
 const SocketContext = createContext<SocketContextType | null>(null)
 
@@ -38,12 +40,14 @@ const SocketProvider = ({ children }: { children: ReactNode }) => {
         drawingData,
         setDrawingData,
     } = useAppContext()
+    const { token } = useAuth()
     const socket: Socket = useMemo(
         () =>
             io(BACKEND_URL, {
                 reconnectionAttempts: 2,
+                auth: token ? { token } : undefined,
             }),
-        [],
+        [token],
     )
 
     const handleError = useCallback(
@@ -66,7 +70,7 @@ const SocketProvider = ({ children }: { children: ReactNode }) => {
     }, [setStatus])
 
     const handleJoiningAccept = useCallback(
-        ({ user, users }: { user: User; users: RemoteUser[] }) => {
+        async ({ user, users }: { user: User; users: RemoteUser[] }) => {
             setCurrentUser(user)
             setUsers(users)
             toast.dismiss()
@@ -75,8 +79,17 @@ const SocketProvider = ({ children }: { children: ReactNode }) => {
             if (users.length > 1) {
                 toast.loading("Syncing data, please wait...")
             }
+
+            // Persist joined room for authenticated users
+            try {
+                if (token) {
+                    await backendApi.post("/user/me/rooms", { roomId: user.roomId })
+                }
+            } catch {
+                // ignore persistence errors
+            }
         },
-        [setCurrentUser, setStatus, setUsers],
+        [setCurrentUser, setStatus, setUsers, token],
     )
 
     const handleUserLeft = useCallback(
