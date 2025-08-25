@@ -6,6 +6,8 @@ import { SocketEvent, SocketId } from "./types/socket"
 import { USER_CONNECTION_STATUS, User } from "./types/user"
 import { Server } from "socket.io"
 import path from "path"
+import authRoutes from "./routes.auth"
+import userRoutes from "./routes.user"
 
 dotenv.config()
 
@@ -16,6 +18,10 @@ app.use(express.json())
 app.use(cors())
 
 app.use(express.static(path.join(__dirname, "public"))) // Serve static files
+
+// REST API routes
+app.use("/api/auth", authRoutes)
+app.use("/api/user", userRoutes)
 
 const server = http.createServer(app)
 const io = new Server(server, {
@@ -56,6 +62,11 @@ function getUserBySocketId(socketId: SocketId): User | null {
 }
 
 io.on("connection", (socket) => {
+	// Optionally read JWT from handshake auth for later use
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const auth: any = socket.handshake.auth || {}
+	const token: string | undefined = auth.token
+	// We are not enforcing auth for sockets yet; token may be undefined
 	// Handle user actions
 	socket.on(SocketEvent.JOIN_REQUEST, ({ roomId, username }) => {
 		// Check is username exist in the room

@@ -4,14 +4,16 @@ import { SocketEvent } from "@/types/socket"
 import { USER_STATUS } from "@/types/user"
 import { ChangeEvent, FormEvent, useEffect, useRef } from "react"
 import { toast } from "react-hot-toast"
-import { useLocation, useNavigate } from "react-router-dom"
+import { useLocation, useNavigate, Link } from "react-router-dom"
 import { v4 as uuidv4 } from "uuid"
 import logo from "@/assets/logo.svg"
+import { useAuth } from "@/context/AuthContext"
 
 const FormComponent = () => {
     const location = useLocation()
     const { currentUser, setCurrentUser, status, setStatus } = useAppContext()
     const { socket } = useSocket()
+    const { user } = useAuth()
 
     const usernameRef = useRef<HTMLInputElement | null>(null)
     const navigate = useNavigate()
@@ -116,6 +118,15 @@ const FormComponent = () => {
                     Join
                 </button>
             </form>
+            <div className="flex w-full items-center justify-between text-sm text-gray-400">
+                <span>
+                    {user ? `Logged in as ${user.email}` : ""}
+                </span>
+                <div className="flex gap-3">
+                    {!user && <Link className="underline" to="/login">Login</Link>}
+                    {!user && <Link className="underline" to="/signup">Signup</Link>}
+                </div>
+            </div>
             <button
                 className="cursor-pointer select-none underline"
                 onClick={createNewRoomId}
