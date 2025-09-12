@@ -1,4 +1,14 @@
 services:
+  mongo:
+    image: mongo:6
+    container_name: code-sync-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - Code-Sync
   server:
     container_name: code-sync-server
     build:
@@ -8,6 +18,8 @@ services:
     volumes:
       - ./server:/app
       - /build/node_modules
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/code-sync
     networks:
       - Code-Sync
     ports:
@@ -32,3 +44,5 @@ services:
 networks:
   Code-Sync:
     driver: bridge
+volumes:
+  mongo-data:

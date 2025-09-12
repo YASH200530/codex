@@ -27,6 +27,7 @@ import { toast } from "react-hot-toast"
 import { v4 as uuidv4 } from "uuid"
 import { useAppContext } from "./AppContext"
 import { useSocket } from "./SocketContext"
+import { getWorkspace, saveWorkspace } from "@/api/serverApi"
 
 const FileContext = createContext<FileContextType | null>(null)
 
@@ -778,6 +779,37 @@ function FileContextProvider({ children }: { children: ReactNode }) {
         handleUserJoined,
         socket,
     ])
+
+    // Load workspace on mount when currentUser changes
+    const { currentUser } = useAppContext()
+    useEffect(() => {
+        const load = async () => {
+            try {
+                if (!currentUser?.roomId) return
+                const res = await getWorkspace(currentUser.roomId)
+                if (res?.ok && res.workspace?.fileStructure) {
+                    setFileStructure(res.workspace.fileStructure as FileSystemItem)
+                }
+            } catch {
+                // ignore
+            }
+        }
+        load()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentUser?.roomId])
+
+    // Autosave workspace on changes (debounced)
+    useEffect(() => {
+        if (!currentUser?.roomId) return
+        const id = setTimeout(() => {
+            saveWorkspace(currentUser.roomId, {
+                fileStructure,
+                // drawingData is saved from AppContext via SocketContext sync
+            }).catch(() => {})
+        }, 800)
+        return () => clearTimeout(id)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [fileStructure, currentUser?.roomId])
 
     return (
         <FileContext.Provider
