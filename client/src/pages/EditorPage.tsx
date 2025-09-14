@@ -32,6 +32,7 @@ function EditorPage() {
         } else if (roomId) {
             const user: User = { username, roomId }
             setCurrentUser(user)
+            ;(window as unknown as { __roomId?: string }).__roomId = roomId
             socket.emit(SocketEvent.JOIN_REQUEST, user)
         }
     }, [

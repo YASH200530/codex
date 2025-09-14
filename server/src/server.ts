@@ -6,6 +6,8 @@ import { SocketEvent, SocketId } from "./types/socket"
 import { USER_CONNECTION_STATUS, User } from "./types/user"
 import { Server } from "socket.io"
 import path from "path"
+import { connectToDatabase } from "./db"
+import { Room } from "./models/Room"
 
 dotenv.config()
 
@@ -262,11 +264,67 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 3000
 
+// REST API
+app.post("/api/rooms", async (req: Request, res: Response) => {
+	try {
+		const { roomId } = req.body as { roomId?: string }
+		if (!roomId || roomId.trim().length < 5) {
+			return res.status(400).json({ ok: false, error: "Invalid roomId" })
+		}
+		await connectToDatabase()
+		let room = await Room.findOne({ roomId })
+		if (!room) {
+			room = await Room.create({ roomId, workspace: {} })
+		}
+		return res.json({ ok: true, room: { roomId: room.roomId, workspace: room.workspace } })
+	} catch (error) {
+		console.error("POST /api/rooms error", error)
+		return res.status(500).json({ ok: false, error: "Internal server error" })
+	}
+})
+
+app.get("/api/rooms/:roomId/workspace", async (req: Request, res: Response) => {
+	try {
+		const roomId = req.params.roomId
+		await connectToDatabase()
+		const room = await Room.findOne({ roomId })
+		if (!room) return res.status(404).json({ ok: false, error: "Room not found" })
+		return res.json({ ok: true, workspace: room.workspace || {} })
+	} catch (error) {
+		console.error("GET /api/rooms/:roomId/workspace error", error)
+		return res.status(500).json({ ok: false, error: "Internal server error" })
+	}
+})
+
+app.put("/api/rooms/:roomId/workspace", async (req: Request, res: Response) => {
+	try {
+		const roomId = req.params.roomId
+		const { fileStructure, drawingData } = req.body as { fileStructure?: unknown; drawingData?: unknown }
+		await connectToDatabase()
+		const room = await Room.findOneAndUpdate(
+			{ roomId },
+			{ $set: { workspace: { fileStructure, drawingData } } },
+			{ new: true, upsert: true }
+		)
+		return res.json({ ok: true, workspace: room.workspace || {} })
+	} catch (error) {
+		console.error("PUT /api/rooms/:roomId/workspace error", error)
+		return res.status(500).json({ ok: false, error: "Internal server error" })
+	}
+})
+
 app.get("/", (req: Request, res: Response) => {
 	// Send the index.html file
 	res.sendFile(path.join(__dirname, "..", "public", "index.html"))
 })
 
-server.listen(PORT, () => {
-	console.log(`Listening on port ${PORT}`)
-})
+connectToDatabase()
+	.then(() => {
+		server.listen(PORT, () => {
+			console.log(`Listening on port ${PORT}`)
+		})
+	})
+	.catch((err) => {
+		console.error("Failed to connect to database", err)
+		process.exit(1)
+	})

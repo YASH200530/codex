@@ -16,6 +16,7 @@ import {
 import { toast } from "react-hot-toast"
 import { Socket, io } from "socket.io-client"
 import { useAppContext } from "./AppContext"
+import { saveWorkspace } from "@/api/serverApi"
 
 const SocketContext = createContext<SocketContextType | null>(null)
 
@@ -97,6 +98,18 @@ const SocketProvider = ({ children }: { children: ReactNode }) => {
     const handleDrawingSync = useCallback(
         ({ drawingData }: { drawingData: DrawingData }) => {
             setDrawingData(drawingData)
+            // Fire and forget save for drawing changes if room exists
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
+            ;(async () => {
+                try {
+                    const roomId = (window as unknown as { __roomId?: string })
+                        .__roomId
+                    if (!roomId) return
+                    await saveWorkspace(roomId, { drawingData })
+                } catch {
+                    /* ignore */
+                }
+            })()
         },
         [setDrawingData],
     )

@@ -7,6 +7,7 @@ import { toast } from "react-hot-toast"
 import { useLocation, useNavigate } from "react-router-dom"
 import { v4 as uuidv4 } from "uuid"
 import logo from "@/assets/logo.svg"
+import { createRoom } from "@/api/serverApi"
 
 const FormComponent = () => {
     const location = useLocation()
@@ -16,10 +17,16 @@ const FormComponent = () => {
     const usernameRef = useRef<HTMLInputElement | null>(null)
     const navigate = useNavigate()
 
-    const createNewRoomId = () => {
-        setCurrentUser({ ...currentUser, roomId: uuidv4() })
-        toast.success("Created a new Room Id")
-        usernameRef.current?.focus()
+    const createNewRoomId = async () => {
+        const newId = uuidv4()
+        try {
+            await createRoom(newId)
+            setCurrentUser({ ...currentUser, roomId: newId })
+            toast.success("Created a new Room Id")
+            usernameRef.current?.focus()
+        } catch (e) {
+            toast.error("Failed to create room. Try again.")
+        }
     }
 
     const handleInputChanges = (e: ChangeEvent<HTMLInputElement>) => {
