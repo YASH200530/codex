@@ -117,6 +117,5 @@ Owner: YASH200530
 
 Notes and next steps
 - I drafted the README to be generic and safe (no assumptions about specific frameworks/scripts). If you tell me which framework (e.g., Next.js, React CRA, Express, Fastify, NestJS) and the actual npm script names used by client and server, I can tailor the "Quick start" and "Run" sections to be exact.
-- If you want, I can commit this file directly to a branch or open a PR adding it to main — tell me which branch name to use and whether you want the change as a direct commit or a PR.
-```
+
 
