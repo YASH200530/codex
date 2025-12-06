@@ -42,7 +42,4 @@ Contributions are welcome. Please open issues or pull requests. Add tests for ne
 
 Specify a license for the project here (e.g., MIT). If you don't have a license yet, add one or remove this section.
 
-## Notes
 
-- The language image above is provided by the GitHub Readme Stats service (https://github.com/anuraghazra/github-readme-stats). It dynamically shows the language breakdown for the repository.
-- If you prefer a different image or style (pie chart, custom badge, or local image), tell me which you'd like and I can update the README accordingly.
