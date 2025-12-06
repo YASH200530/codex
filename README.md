@@ -1,6 +1,6 @@
 # Codex
 
-Codex is a full-stack TypeScript project composed of a client (frontend) and server (backend). It includes Docker Compose configuration for local development and deployment. Visit the live site: https://codex-verse.vercel.app
+Codex is a full-stack TypeScript project composed of a client (frontend) and server (backend). It includes Docker Compose configuration for local development and deployment. 
 
 Key facts
 - License: MIT
@@ -112,10 +112,11 @@ This project is licensed under the MIT License. See LICENSE for details.
 
 Contact
 Repository: https://github.com/YASH200530/codex
-Homepage / Demo: https://codex-verse.vercel.app
+Homepage 
 Owner: YASH200530
 
 Notes and next steps
 - I drafted the README to be generic and safe (no assumptions about specific frameworks/scripts). If you tell me which framework (e.g., Next.js, React CRA, Express, Fastify, NestJS) and the actual npm script names used by client and server, I can tailor the "Quick start" and "Run" sections to be exact.
 - If you want, I can commit this file directly to a branch or open a PR adding it to main — tell me which branch name to use and whether you want the change as a direct commit or a PR.
 ```
+
