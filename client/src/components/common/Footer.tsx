@@ -7,7 +7,7 @@ function Footer() {
                     href="https://github.com/YASH200530"
                     className="text-primary underline underline-offset-1"
                 >
-                    sahilatahar
+                    Yash Singh
                 </a>
             </span>
         </footer>
